@@ -1,4 +1,3 @@
-// ❌ NO cargar dotenv aquí - ya se carga en server.js
 const { MongoClient } = require('mongodb');
 
 let database;
@@ -13,20 +12,23 @@ const initDb = (callback) => {
   
   if (!mongoUri) {
     console.error('❌ MONGO_URI NO ESTÁ CONFIGURADO');
-    console.error('💡 Asegúrate de que el archivo .env existe con MONGO_URI');
     return callback(new Error('MONGO_URI not configured'));
   }
 
   console.log('🔄 Iniciando conexión a MongoDB Atlas...');
-  console.log('📍 Conectando a:', mongoUri.split('@')[1]?.split('/')[0] || '[hidden]');
+  console.log('📍 Node version:', process.version);
 
+  // Opciones específicas para Render (Node 18+ en contenedor Linux)
   const options = {
-    tls: true,
-    tlsAllowInvalidCertificates: true,
+    // NO usar las opciones deprecadas useNewUrlParser y useUnifiedTopology
+    serverSelectionTimeoutMS: 30000,
+    connectTimeoutMS: 30000,
+    socketTimeoutMS: 30000,
     maxPoolSize: 10,
-    serverSelectionTimeoutMS: 15000,
-    socketTimeoutMS: 45000,
-    connectTimeoutMS: 15000,
+    minPoolSize: 5,
+    retryWrites: true,
+    retryReads: true,
+    w: 'majority',
   };
 
   MongoClient.connect(mongoUri, options)
@@ -38,10 +40,7 @@ const initDb = (callback) => {
     .catch((err) => {
       console.error('❌ ERROR AL CONECTAR A MONGODB:');
       console.error('   Mensaje:', err.message);
-      console.error('🔧 Verifica:');
-      console.error('   1. MONGO_URI en .env (local) o Render Environment (producción)');
-      console.error('   2. IP 0.0.0.0/0 en MongoDB Atlas Network Access');
-      console.error('   3. Usuario/password correctos');
+      console.error('   Stack:', err.stack);
       callback(err);
     });
 };
